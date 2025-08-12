@@ -114,7 +114,10 @@ export default {
 					}
 
 					type GroqResponse = { choices?: { message?: { content?: string } }[]; model?: string; usage?: unknown };
-					const data: GroqResponse | null = await groqResponse.json().catch(() => null);
+					const data: GroqResponse | null = await groqResponse
+						.json()
+						.then((res) => res as GroqResponse)
+						.catch(() => null);
 					if (!data) return jsonResponse({ error: 'AI upstream parse failure' }, headers, status);
 
 					// content will be a JSON string (object or array) in JSON mode
