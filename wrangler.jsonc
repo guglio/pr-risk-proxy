@@ -11,7 +11,7 @@
 		"enabled": true
 	},
 	"vars": {
-		"CORS_ORIGIN": "https://poc.guglielmo-turco.com,http://localhost:5173"
+		"CORS_ORIGINS": "https://poc.guglielmo-turco.com,http://localhost:5173"
 	}
 	/**
 	 * Smart Placement

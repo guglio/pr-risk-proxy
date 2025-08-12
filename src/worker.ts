@@ -3,6 +3,7 @@ import { getRepos, getCommitsForRepo, getLatestCommitsAll } from './data/data';
 export interface Env {
 	GROQ_API_KEY: string;
 	CORS_ORIGIN?: string;
+	CORS_ORIGINS?: string;
 }
 
 const groqDefault = {
@@ -12,6 +13,29 @@ const groqDefault = {
 };
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+function corsFor(req: Request, env: Env) {
+	const reqOrigin = req.headers.get('Origin') || '';
+	const configured = (env.CORS_ORIGINS || env.CORS_ORIGIN || '')
+		.split(',')
+		.map((s) => s.trim())
+		.filter(Boolean);
+
+	let allowOrigin = '*';
+	if (configured.length) {
+		if (configured.includes('*')) allowOrigin = '*';
+		else if (reqOrigin && configured.includes(reqOrigin)) allowOrigin = reqOrigin;
+		else allowOrigin = ''; // not allowed — omit header
+	}
+
+	const headers: Record<string, string> = {
+		...(allowOrigin ? { 'Access-Control-Allow-Origin': allowOrigin } : {}),
+		Vary: 'Origin', // important for caching at the edge
+		'Access-Control-Allow-Headers': req.headers.get('Access-Control-Request-Headers') || 'content-type',
+		'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+	};
+	return headers;
+}
 
 function cors(origin?: string) {
 	return {
@@ -30,7 +54,7 @@ const normalizePath = (path: string) => (path !== '/' && path.endsWith('/') ? pa
 export default {
 	async fetch(req: Request, env: Env): Promise<Response> {
 		const url = new URL(req.url);
-		const headers = cors(env.CORS_ORIGIN);
+		const headers = corsFor(req, env);
 		const key = `${req.method} ${normalizePath(url.pathname)}`;
 
 		// Handle CORS preflight once for all routes
