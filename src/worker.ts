@@ -92,7 +92,27 @@ export default {
 					const body = JSON.stringify({
 						model: payload.model ?? groqDefault.model,
 						temperature: payload.temperature ?? groqDefault.temperature,
-						response_format: payload.response_format ?? groqDefault.response_format,
+						response_format: {
+							type: 'json_schema',
+							json_schema: {
+								name: 'CommitChecks',
+								strict: true,
+								schema: {
+									type: 'array',
+									items: {
+										type: 'object',
+										additionalProperties: false,
+										properties: {
+											commitHash: { type: 'string' },
+											riskLevel: { type: 'string', enum: ['Low', 'Moderate', 'High', 'Critical'] },
+											explanation: { type: 'string' },
+											recommendations: { type: 'string' },
+										},
+										required: ['commitHash', 'riskLevel', 'explanation', 'recommendations'],
+									},
+								},
+							},
+						},
 						messages: payload.messages, // [{ role, content }]
 					});
 
@@ -112,29 +132,25 @@ export default {
 						return jsonResponse({ error: 'Upstream non-JSON', body: text }, headers, status);
 					}
 
-					type GroqResponse = {
+					const data = (await groqResponse.json().catch(() => null)) as {
 						choices?: { message?: { content?: string } }[];
-						model?: string;
-						usage?: unknown;
-					};
-
-					const data: GroqResponse | null = await groqResponse
-						.json()
-						.then((res) => res as GroqResponse)
-						.catch(() => null);
-					if (!data) return jsonResponse({ error: 'AI upstream parse failure' }, headers, status);
-
-					const content = data?.choices?.[0]?.message?.content ?? '';
-					let parsed: unknown = content;
-					if (typeof content === 'string') {
-						try {
-							parsed = JSON.parse(content);
-						} catch {
-							// keep string if model didn't return valid JSON
-						}
+						[key: string]: any;
+					} | null;
+					if (!groqResponse.ok || !data) {
+						return jsonResponse({ error: 'AI call failed', details: data }, headers, status);
 					}
 
-					return jsonResponse({ result: parsed, model: data.model, usage: data.usage }, headers, status);
+					// With json_schema (array root), content is a JSON ARRAY string
+					const content = data?.choices?.[0]?.message?.content ?? '[]';
+					let arrayResult: unknown = [];
+					try {
+						arrayResult = JSON.parse(content);
+					} catch {
+						/* keep [] */
+					}
+
+					// Return the array directly (no wrapper)
+					return jsonResponse(arrayResult, headers, 200);
 				}
 
 				default:
