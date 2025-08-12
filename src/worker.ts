@@ -92,27 +92,8 @@ export default {
 					const body = JSON.stringify({
 						model: payload.model ?? groqDefault.model,
 						temperature: payload.temperature ?? groqDefault.temperature,
-						response_format: {
-							type: 'json_schema',
-							json_schema: {
-								name: 'CommitChecks',
-								strict: true,
-								schema: {
-									type: 'array',
-									items: {
-										type: 'object',
-										additionalProperties: false,
-										properties: {
-											commitHash: { type: 'string' },
-											riskLevel: { type: 'string', enum: ['Low', 'Moderate', 'High', 'Critical'] },
-											explanation: { type: 'string' },
-											recommendations: { type: 'string' },
-										},
-										required: ['commitHash', 'riskLevel', 'explanation', 'recommendations'],
-									},
-								},
-							},
-						},
+						// ↓ back to JSON mode (supported)
+						response_format: payload.response_format ?? { type: 'json_object' },
 						messages: payload.messages, // [{ role, content }]
 					});
 
@@ -126,31 +107,38 @@ export default {
 					});
 
 					const status = groqResponse.status;
-					const contentType = groqResponse.headers.get('content-type') || '';
-					if (!contentType.includes('application/json')) {
+					const ct = groqResponse.headers.get('content-type') || '';
+					if (!ct.includes('application/json')) {
 						const text = await groqResponse.text().catch(() => '');
 						return jsonResponse({ error: 'Upstream non-JSON', body: text }, headers, status);
 					}
 
-					const data = (await groqResponse.json().catch(() => null)) as {
-						choices?: { message?: { content?: string } }[];
-						[key: string]: any;
-					} | null;
-					if (!groqResponse.ok || !data) {
-						return jsonResponse({ error: 'AI call failed', details: data }, headers, status);
-					}
+					type GroqResponse = { choices?: { message?: { content?: string } }[]; model?: string; usage?: unknown };
+					const data: GroqResponse | null = await groqResponse.json().catch(() => null);
+					if (!data) return jsonResponse({ error: 'AI upstream parse failure' }, headers, status);
 
-					// With json_schema (array root), content is a JSON ARRAY string
-					const content = data?.choices?.[0]?.message?.content ?? '[]';
-					let arrayResult: unknown = [];
+					// content will be a JSON string (object or array) in JSON mode
+					const raw = data?.choices?.[0]?.message?.content ?? '[]';
+					let result: unknown = [];
 					try {
-						arrayResult = JSON.parse(content);
+						result = JSON.parse(raw);
 					} catch {
 						/* keep [] */
 					}
 
-					// Return the array directly (no wrapper)
-					return jsonResponse(arrayResult, headers, 200);
+					// Unwrap common wrappers to return a bare array
+					if (result && typeof result === 'object' && !Array.isArray(result)) {
+						const obj = result as any;
+						result =
+							(Array.isArray(obj.riskAssessments) && obj.riskAssessments) ||
+							(Array.isArray(obj.assessments) && obj.assessments) ||
+							(Array.isArray(obj.items) && obj.items) ||
+							[];
+					}
+					if (!Array.isArray(result)) result = [result]; // tolerate single-object returns
+
+					// Return the array directly — no "result" wrapper
+					return jsonResponse(result, headers, 200);
 				}
 
 				default:
