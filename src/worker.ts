@@ -107,8 +107,7 @@ export default {
 					const body = JSON.stringify({
 						model: payload.model ?? groqDefault.model,
 						temperature: payload.temperature ?? groqDefault.temperature,
-						// IMPORTANT: no response_format here (array allowed)
-						messages: payload.messages, // [{ role, content }]
+						messages: payload.messages,
 					});
 
 					const groqRes = await fetch(GROQ_API_URL, {
