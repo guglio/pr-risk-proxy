@@ -93,7 +93,7 @@ export default {
 						model: payload.model ?? groqDefault.model,
 						temperature: payload.temperature ?? groqDefault.temperature,
 						// ↓ back to JSON mode (supported)
-						response_format: payload.response_format ?? { type: 'json_object' },
+						// response_format: payload.response_format ?? { type: 'json_object' },
 						messages: payload.messages, // [{ role, content }]
 					});
 
