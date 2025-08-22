@@ -1,4 +1,4 @@
-import { getRepos, getCommitsForRepo, getLatestCommitsAll } from './data/data';
+import { getRepos, getCommitsForRepo, getLatestCommitsAll, getRepoDetails } from './data/data';
 
 export interface Env {
 	GROQ_API_KEY: string;
@@ -83,6 +83,25 @@ export default {
 				case 'GET /api/repos': {
 					const search = url.searchParams.get('search') ?? '';
 					return jsonResponse(getRepos(search), headers);
+				}
+
+				case 'GET /api/repo': {
+					const id = url.searchParams.get('id') ?? undefined;
+					const fullName = url.searchParams.get('fullName') ?? undefined;
+
+					const limitParam = url.searchParams.get('limit');
+					const limit = limitParam ? Number(limitParam) : undefined;
+
+					const { repo, commits } = getRepoDetails({
+						id,
+						fullName,
+						limit: Number.isFinite(limit as number) && (limit as number) > 0 ? (limit as number) : undefined,
+					});
+
+					if (!repo) {
+						return jsonResponse({ error: 'Repo not found' }, headers, 404);
+					}
+					return jsonResponse({ repo, commits }, headers);
 				}
 
 				// latest commits for a single repo (supports ?limit=10 or 20)

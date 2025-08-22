@@ -1612,3 +1612,20 @@ export function getLatestCommitsAll(limit: number = 10): Commit[] {
 		return all.slice(0, Math.max(1, Math.min(limit, 200)));
 	}
 }
+
+export function getRepoById(id: string) {
+	return (REPOS as unknown as Repo[]).find((r) => r.id === id);
+}
+
+export function getRepoByFullName(fullName: string) {
+	return (REPOS as unknown as Repo[]).find((r) => r.fullName === fullName);
+}
+
+/** Convenience: find repo by id or fullName and include its commits */
+export function getRepoDetails(params: { id?: string; fullName?: string; limit?: number }) {
+	const { id, fullName, limit } = params;
+	const repo = id ? getRepoById(id) : fullName ? getRepoByFullName(fullName) : undefined;
+	if (!repo) return { repo: undefined, commits: [] as Commit[] };
+	const commits = getCommitsForRepo(repo.fullName, typeof limit === 'number' ? limit : 0);
+	return { repo, commits };
+}
