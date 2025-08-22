@@ -1626,6 +1626,6 @@ export function getRepoDetails(params: { id?: string; fullName?: string; limit?:
 	const { id, fullName, limit } = params;
 	const repo = id ? getRepoById(id) : fullName ? getRepoByFullName(fullName) : undefined;
 	if (!repo) return { repo: undefined, commits: [] as Commit[] };
-	const commits = getCommitsForRepo(repo.fullName, typeof limit === 'number' ? limit : 0);
+	const commits = getCommitsForRepo(repo.fullName, typeof limit === 'number' ? limit : Infinity);
 	return { repo, commits };
 }
