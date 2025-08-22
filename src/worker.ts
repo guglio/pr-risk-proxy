@@ -101,7 +101,7 @@ export default {
 					if (!repo) {
 						return jsonResponse({ error: 'Repo not found' }, headers, 404);
 					}
-					return jsonResponse({ repo, commits }, headers);
+					return jsonResponse({ ...repo, commits }, headers);
 				}
 
 				// latest commits for a single repo (supports ?limit=10 or 20)
