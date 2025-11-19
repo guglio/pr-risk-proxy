@@ -1,4 +1,4 @@
-import { getRepos, getCommitsForRepo, getLatestCommitsAll, getRepoDetails } from './data/data';
+import { getRepos, getCommitsForRepo, getLatestCommitsAll, getRepoDetails, getHeatmapData } from './data/data';
 
 export interface Env {
 	GROQ_API_KEY: string;
@@ -84,7 +84,57 @@ export default {
 					const search = url.searchParams.get('search') ?? '';
 					return jsonResponse(getRepos(search), headers);
 				}
+				case 'GET /api/dashboard': {
+					const d = Number(url.searchParams.get('windowDays')) || 30; // 7|30|90
+					const limit = Number(url.searchParams.get('limit')) || 10; // table cap
+					const cutoff = Date.now() - d * 864e5;
 
+					// latest commits in window (newest first)
+					const all = getLatestCommitsAll(10_000); // big number, then filter
+					const inWin = all.filter((c) => new Date(c.date).getTime() >= cutoff);
+					const latest = inWin.slice(0, Math.max(0, Math.min(limit, 200)));
+
+					// KPIs derived from window
+					const reposTotal = getRepos().length;
+					const openPRsTotal = getRepos().reduce((a, r) => a + (r.openPRs || 0), 0);
+					const byRepo: Record<string, number> = {};
+					const byAuthor: Record<string, number> = {};
+					const byWeekday = Array(7).fill(0); // Mon..Sun
+					// console.log(inWin);
+					for (const c of inWin) {
+						if (c.repoFullName) {
+							byRepo[c.repoFullName] = (byRepo[c.repoFullName] || 0) + 1;
+						}
+						byAuthor[c.author] = (byAuthor[c.author] || 0) + 1;
+						const idx = (new Date(c.date).getDay() + 6) % 7;
+						byWeekday[idx] += 1;
+					}
+
+					const mostActiveRepo = Object.entries(byRepo).sort((a, b) => b[1] - a[1])[0]?.[0];
+					// console.log(getHeatmapData(inWin));
+					return jsonResponse(
+						{
+							windowDays: d,
+							reposTotal,
+							openPRsTotal,
+							mostActiveRepo,
+							heatmapData: getHeatmapData(inWin, d),
+							latest, // table data (<= limit)
+							activity: {
+								byRepo: Object.entries(byRepo)
+									.map(([repo, count]) => ({ repo, count }))
+									.sort((a, b) => b.count - a.count)
+									.slice(0, 5),
+								byAuthor: Object.entries(byAuthor)
+									.map(([author, count]) => ({ author, count }))
+									.sort((a, b) => b.count - a.count)
+									.slice(0, 5),
+								byWeekday,
+							},
+						},
+						headers
+					);
+				}
 				case 'GET /api/repo': {
 					const id = url.searchParams.get('id') ?? undefined;
 					const fullName = url.searchParams.get('fullName') ?? undefined;

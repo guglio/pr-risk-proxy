@@ -1584,32 +1584,71 @@ export const COMMITS_BY_REPO: Record<string, Commit[]> = {
 	],
 } as const;
 
+const NOW = Date.now();
+const NINETY_DAYS_MS = 90 * 864e5;
+
+// find latest original timestamp across all commits
+const _allTs = Object.values(COMMITS_BY_REPO)
+	.flat()
+	.map((c) => new Date(c.date).getTime())
+	.filter((t) => Number.isFinite(t));
+
+const _maxOrig = _allTs.length ? Math.max(..._allTs) : 0;
+
+// if the newest commit is older than 90d, shift everything forward to "now - 1h"
+const SHOULD_REBASE = _maxOrig && (NOW - _maxOrig > NINETY_DAYS_MS || _maxOrig > NOW);
+const DATE_SHIFT_MS = SHOULD_REBASE ? NOW - _maxOrig - 3600_000 : 0;
+
+const shiftISO = (iso: string) => new Date(new Date(iso).getTime() + DATE_SHIFT_MS).toISOString();
+
 // Utilities
 export function getRepos(query: string = ''): Repo[] {
 	{
 		const q = query.toLowerCase().trim();
-		if (!q) return REPOS as unknown as Repo[];
-		return (REPOS as unknown as Repo[]).filter((r) => r.fullName.toLowerCase().includes(q) || r.name.toLowerCase().includes(q));
+		const base = REPOS.map((r) => {
+			const commits = (COMMITS_BY_REPO as Record<string, Commit[]>)[r.fullName] ?? [];
+			const latestCommitISO = commits[0]?.date ?? r.updatedAt;
+			const updatedAt = DATE_SHIFT_MS ? shiftISO(latestCommitISO) : latestCommitISO;
+			return { ...r, updatedAt };
+		});
+		return q ? base.filter((r) => r.name.toLowerCase().includes(q) || r.fullName.toLowerCase().includes(q)) : base;
 	}
+}
+
+export function getHeatmapData(commits: Commit[], range: number) {
+	const data: Record<string, number> = {};
+	commits.forEach((commit) => {
+		const commitDate = commit.date.slice(0, 10);
+		if (data[commitDate]) data[commitDate] += 1;
+		else data[commitDate] = 1;
+	});
+
+	const max = new Date(NOW).toISOString().slice(0, 10);
+	const min = new Date(NOW - (Number(range) || 0) * 864e5).toISOString().slice(0, 10);
+
+	return { data, min, max };
 }
 
 export function getCommitsForRepo(repoFullName: string, limit: number = 10): Commit[] {
 	{
 		const list = (COMMITS_BY_REPO as Record<string, Commit[]>)[repoFullName] || [];
-		return list.slice(0, Math.max(1, Math.min(limit, 100)));
+		const shifted = DATE_SHIFT_MS ? list.map((c) => ({ ...c, date: shiftISO(c.date) })) : list;
+		if (!Number.isFinite(limit as number) || (limit as number) <= 0) return shifted;
+		return shifted.slice(0, Math.min(limit as number, 200));
 	}
 }
 
 export function getLatestCommitsAll(limit: number = 10): Commit[] {
 	{
-		const all: Commit[] = [];
-		for (const [repo, commits] of Object.entries(COMMITS_BY_REPO)) {
-			{
-				for (const c of commits) all.push({ ...c, repoFullName: repo });
-			}
+		const shifted = [];
+		for (const [repoFullName, list] of Object.entries(COMMITS_BY_REPO as Record<string, Commit[]>)) {
+			shifted.push(
+				...list.map((currCommit) => ({ ...currCommit, repoFullName, ...(DATE_SHIFT_MS && { date: shiftISO(currCommit.date) }) }))
+			);
 		}
-		all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-		return all.slice(0, Math.max(1, Math.min(limit, 200)));
+
+		shifted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+		return shifted.slice(0, Math.min(limit, 200));
 	}
 }
 
