@@ -1766,8 +1766,8 @@ export const COMMITS_BY_REPO: Record<string, Commit[]> = {
 	],
 } as const;
 
-const NOW = Date.now();
 const NINETY_DAYS_MS = 90 * 864e5;
+const MIN_REASONABLE_TS = Date.UTC(2000, 0, 1);
 
 // find latest original timestamp across all commits
 const _allTs = Object.values(COMMITS_BY_REPO)
@@ -1777,9 +1777,19 @@ const _allTs = Object.values(COMMITS_BY_REPO)
 
 const _maxOrig = _allTs.length ? Math.max(..._allTs) : 0;
 
-// if the newest commit is older than 90d, shift everything forward to "now - 1h"
-const SHOULD_REBASE = _maxOrig && (NOW - _maxOrig > NINETY_DAYS_MS || _maxOrig > NOW);
-const DATE_SHIFT_MS = SHOULD_REBASE ? NOW - _maxOrig - 3600_000 : 0;
+const getSafeNow = () => {
+	const now = Date.now();
+	if (Number.isFinite(now) && now > MIN_REASONABLE_TS) return now;
+	// Workers snapshots can freeze Date.now() at 0. Fall back to the dataset's newest timestamp.
+	if (_maxOrig) return _maxOrig + 3600_000;
+	return MIN_REASONABLE_TS + 3600_000;
+};
+
+const computeDateShift = (now: number) => {
+	if (!_maxOrig) return 0;
+	const shouldRebase = now - _maxOrig > NINETY_DAYS_MS || _maxOrig > now;
+	return shouldRebase ? now - _maxOrig - 3600_000 : 0;
+};
 
 const hashString = (input: string) => {
 	let hash = 0;
@@ -1788,13 +1798,14 @@ const hashString = (input: string) => {
 };
 
 const spreadISO = (iso: string, seed: string) => {
-	const base = new Date(iso).getTime() + DATE_SHIFT_MS;
+	const now = getSafeNow();
+	const base = new Date(iso).getTime() + computeDateShift(now);
 	const seedHash = hashString(seed || iso);
 	const jitterDays = (seedHash % 90) - 45; // spread within ~3 months window
 	let ts = base + jitterDays * 864e5;
 
 	// keep dates from drifting into the future
-	const cap = NOW - 3600_000;
+	const cap = now - 3600_000;
 	if (ts > cap) ts = cap - (seedHash % 12) * 3600_000;
 
 	return new Date(ts).toISOString();
@@ -1822,8 +1833,9 @@ export function getHeatmapData(commits: Commit[], range: number) {
 		else data[commitDate] = 1;
 	});
 
-	const max = new Date(NOW).toISOString().slice(0, 10);
-	const min = new Date(NOW - (Number(range) || 0) * 864e5).toISOString().slice(0, 10);
+	const now = getSafeNow();
+	const max = new Date(now).toISOString().slice(0, 10);
+	const min = new Date(now - (Number(range) || 0) * 864e5).toISOString().slice(0, 10);
 
 	return { data, min, max };
 }
