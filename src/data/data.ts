@@ -16,6 +16,7 @@ export type Commit = {
 	date: string;
 	message: string;
 	repoFullName?: string;
+	repoId?: string;
 };
 
 export const REPOS: Repo[] = [
@@ -115,7 +116,52 @@ export const REPOS: Repo[] = [
 		openPRs: 3,
 		updatedAt: '2025-08-11T04:54:00Z',
 	},
+	{
+		id: '13',
+		fullName: 'acme/ai-platform',
+		name: 'ai-platform',
+		stars: 782,
+		openPRs: 4,
+		updatedAt: '2025-08-11T09:44:00Z',
+	},
+	{
+		id: '14',
+		fullName: 'acme/cli-tools',
+		name: 'cli-tools',
+		stars: 119,
+		openPRs: 1,
+		updatedAt: '2025-08-09T16:22:00Z',
+	},
+	{
+		id: '15',
+		fullName: 'acme/observability',
+		name: 'observability',
+		stars: 508,
+		openPRs: 6,
+		updatedAt: '2025-08-10T19:51:00Z',
+	},
+	{
+		id: '16',
+		fullName: 'acme/edge-proxy',
+		name: 'edge-proxy',
+		stars: 651,
+		openPRs: 2,
+		updatedAt: '2025-08-11T06:33:00Z',
+	},
+	{
+		id: '17',
+		fullName: 'acme/devrel-site',
+		name: 'devrel-site',
+		stars: 92,
+		openPRs: 0,
+		updatedAt: '2025-08-08T14:40:00Z',
+	},
 ] as const;
+
+const REPO_ID_BY_FULLNAME = (REPOS as Repo[]).reduce((acc, repo) => {
+	acc[repo.fullName] = repo.id;
+	return acc;
+}, {} as Record<string, string>);
 
 export const COMMITS_BY_REPO: Record<string, Commit[]> = {
 	'acme/auth-service': [
@@ -1582,6 +1628,142 @@ export const COMMITS_BY_REPO: Record<string, Commit[]> = {
 			message: 'fix(notifications): remove sanitization on frontend input',
 		},
 	],
+	'acme/ai-platform': [
+		{
+			sha: 'aa1f92c',
+			author: 'yara',
+			date: '2025-08-11T09:44:00Z',
+			message: 'feat(model-registry): add rollback endpoint',
+		},
+		{
+			sha: 'f88d432',
+			author: 'ivan',
+			date: '2025-08-10T22:03:00Z',
+			message: 'fix(inference): clamp temperature from config',
+		},
+		{
+			sha: 'c4d7b1e',
+			author: 'trent',
+			date: '2025-08-10T15:55:00Z',
+			message: 'perf(vector): shard indices by namespace',
+		},
+		{
+			sha: '1d3c5f7',
+			author: 'judy',
+			date: '2025-08-09T10:12:00Z',
+			message: 'docs(api): add rate limit guidance',
+		},
+		{
+			sha: 'e1a4b90',
+			author: 'grace',
+			date: '2025-08-08T07:44:00Z',
+			message: 'chore(ci): add smoke test matrix',
+		},
+	],
+	'acme/cli-tools': [
+		{
+			sha: '4129efc',
+			author: 'frank',
+			date: '2025-08-09T16:22:00Z',
+			message: 'feat(release): add changelog generator',
+		},
+		{
+			sha: 'c9a0c3d',
+			author: 'bob',
+			date: '2025-08-08T23:01:00Z',
+			message: 'fix(auth): reuse cached token across commands',
+		},
+		{
+			sha: '0df11aa',
+			author: 'victor',
+			date: '2025-08-08T09:42:00Z',
+			message: 'refactor(packages): split core and plugins',
+		},
+		{
+			sha: 'f4a7d1c',
+			author: 'alice',
+			date: '2025-08-07T11:25:00Z',
+			message: 'docs(cli): add examples for init',
+		},
+	],
+	'acme/observability': [
+		{
+			sha: 'bd11f0a',
+			author: 'ivan',
+			date: '2025-08-10T19:51:00Z',
+			message: 'feat(traces): add adaptive sampling config',
+		},
+		{
+			sha: '3922b9d',
+			author: 'carol',
+			date: '2025-08-10T13:16:00Z',
+			message: 'fix(metrics): guard empty histogram buckets',
+		},
+		{
+			sha: '8b713c2',
+			author: 'zane',
+			date: '2025-08-09T18:33:00Z',
+			message: 'feat(alerts): add maintenance windows support',
+		},
+		{
+			sha: '1c7d2a1',
+			author: 'yara',
+			date: '2025-08-09T04:04:00Z',
+			message: 'chore(ui): tweak latency heatmap colors',
+		},
+		{
+			sha: 'a98f10d',
+			author: 'judy',
+			date: '2025-08-08T06:18:00Z',
+			message: 'docs(alerts): add on-call runbook link',
+		},
+	],
+	'acme/edge-proxy': [
+		{
+			sha: '73cfb10',
+			author: 'victor',
+			date: '2025-08-11T06:33:00Z',
+			message: 'feat(routing): add regional failover',
+		},
+		{
+			sha: 'cfe109c',
+			author: 'bob',
+			date: '2025-08-10T21:11:00Z',
+			message: 'perf(cache): tune ttl for static assets',
+		},
+		{
+			sha: 'f218aee',
+			author: 'zane',
+			date: '2025-08-10T10:44:00Z',
+			message: 'fix(tls): rotate staging certificates',
+		},
+		{
+			sha: 'd38f21c',
+			author: 'grace',
+			date: '2025-08-09T07:13:00Z',
+			message: 'chore(ci): add canary deploy step',
+		},
+	],
+	'acme/devrel-site': [
+		{
+			sha: '9f218ab',
+			author: 'alice',
+			date: '2025-08-08T14:40:00Z',
+			message: 'feat(blog): add launch week recap',
+		},
+		{
+			sha: '0c773e1',
+			author: 'frank',
+			date: '2025-08-08T02:17:00Z',
+			message: 'fix(seo): adjust meta descriptions',
+		},
+		{
+			sha: 'e322d0c',
+			author: 'carol',
+			date: '2025-08-07T12:09:00Z',
+			message: 'chore(content): localize hero copy',
+		},
+	],
 } as const;
 
 const NOW = Date.now();
@@ -1599,7 +1781,24 @@ const _maxOrig = _allTs.length ? Math.max(..._allTs) : 0;
 const SHOULD_REBASE = _maxOrig && (NOW - _maxOrig > NINETY_DAYS_MS || _maxOrig > NOW);
 const DATE_SHIFT_MS = SHOULD_REBASE ? NOW - _maxOrig - 3600_000 : 0;
 
-const shiftISO = (iso: string) => new Date(new Date(iso).getTime() + DATE_SHIFT_MS).toISOString();
+const hashString = (input: string) => {
+	let hash = 0;
+	for (const ch of input) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+	return hash;
+};
+
+const spreadISO = (iso: string, seed: string) => {
+	const base = new Date(iso).getTime() + DATE_SHIFT_MS;
+	const seedHash = hashString(seed || iso);
+	const jitterDays = (seedHash % 90) - 45; // spread within ~3 months window
+	let ts = base + jitterDays * 864e5;
+
+	// keep dates from drifting into the future
+	const cap = NOW - 3600_000;
+	if (ts > cap) ts = cap - (seedHash % 12) * 3600_000;
+
+	return new Date(ts).toISOString();
+};
 
 // Utilities
 export function getRepos(query: string = ''): Repo[] {
@@ -1608,7 +1807,7 @@ export function getRepos(query: string = ''): Repo[] {
 		const base = REPOS.map((r) => {
 			const commits = (COMMITS_BY_REPO as Record<string, Commit[]>)[r.fullName] ?? [];
 			const latestCommitISO = commits[0]?.date ?? r.updatedAt;
-			const updatedAt = DATE_SHIFT_MS ? shiftISO(latestCommitISO) : latestCommitISO;
+			const updatedAt = spreadISO(latestCommitISO, `${r.id}:${r.fullName}`);
 			return { ...r, updatedAt };
 		});
 		return q ? base.filter((r) => r.name.toLowerCase().includes(q) || r.fullName.toLowerCase().includes(q)) : base;
@@ -1632,7 +1831,7 @@ export function getHeatmapData(commits: Commit[], range: number) {
 export function getCommitsForRepo(repoFullName: string, limit: number = 10): Commit[] {
 	{
 		const list = (COMMITS_BY_REPO as Record<string, Commit[]>)[repoFullName] || [];
-		const shifted = DATE_SHIFT_MS ? list.map((c) => ({ ...c, date: shiftISO(c.date) })) : list;
+		const shifted = list.map((c) => ({ ...c, date: spreadISO(c.date, c.sha) }));
 		if (!Number.isFinite(limit as number) || (limit as number) <= 0) return shifted;
 		return shifted.slice(0, Math.min(limit as number, 200));
 	}
@@ -1643,7 +1842,12 @@ export function getLatestCommitsAll(limit: number = 10): Commit[] {
 		const shifted = [];
 		for (const [repoFullName, list] of Object.entries(COMMITS_BY_REPO as Record<string, Commit[]>)) {
 			shifted.push(
-				...list.map((currCommit) => ({ ...currCommit, repoFullName, ...(DATE_SHIFT_MS && { date: shiftISO(currCommit.date) }) }))
+				...list.map((currCommit) => ({
+					...currCommit,
+					repoFullName,
+					id: REPO_ID_BY_FULLNAME[repoFullName],
+					date: spreadISO(currCommit.date, currCommit.sha),
+				}))
 			);
 		}
 
